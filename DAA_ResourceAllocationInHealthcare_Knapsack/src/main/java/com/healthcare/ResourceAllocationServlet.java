@@ -19,33 +19,31 @@ public class ResourceAllocationServlet extends HttpServlet {
 
         ResourceManager resourceManager = new ResourceManager();
         List<Resource> availableResources = resourceManager.getAvailableResources();
-        List<Resource> allocatedResources = new ArrayList<>();
-        List<String> unavailableResources = new ArrayList<>(); // List for unavailable resources
+        List<Resource> filteredResources = new ArrayList<>();
 
-        // Call the greedy knapsack allocation logic
-        allocatedResources = ResourceAllocator.allocateResources(capacity, availableResources);
-
-        // Now check for needs and unavailable resources based on the requested needs
+        // Filter resources to match only the requested needs
         for (String need : needs) {
-            boolean allocated = false;
-            System.out.println(need+" this is need");
-            // Check if the requested resource is already in the allocated resources list
-            for (Resource resource : allocatedResources) {
-                // Check if the exact resource name matches the requested need
-                if (resource.getType().equalsIgnoreCase(need)) {
-                    allocated = true;
-                    System.out.println(need+" is allocated "+allocated);
-                    break;
+            for (Resource resource : availableResources) {
+                if (resource.getType().equalsIgnoreCase(need) && resource.isAvailable()) {
+                    filteredResources.add(resource);
                 }
             }
+        }
 
-            // If the resource wasn't allocated, add it to the unavailable resources list
-            if (!allocated) {
+        // Allocate resources from the filtered list
+        List<Resource> allocatedResources = ResourceAllocator.allocateResources(capacity, filteredResources);
+        List<String> unavailableResources = new ArrayList<>();
+
+        // Check if all requested needs are fulfilled
+        for (String need : needs) {
+            boolean needFulfilled = allocatedResources.stream()
+                    .anyMatch(resource -> resource.getType().equalsIgnoreCase(need));
+            if (!needFulfilled) {
                 unavailableResources.add(need + " is unavailable.");
             }
         }
 
-        // Set the attributes for the JSP page
+        // Set attributes for the JSP page
         request.setAttribute("allocatedResources", allocatedResources);
         request.setAttribute("unavailableResources", unavailableResources);
 
